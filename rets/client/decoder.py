@@ -1,12 +1,13 @@
 import logging
 import re
 from collections import OrderedDict
-from datetime import datetime, time, timezone
+from datetime import datetime, time, timezone, timedelta, tzinfo
 from decimal import Decimal
 from functools import partial
 from typing import Any, Sequence
 
-import udatetime
+from dateutil.parser import parse, isoparse
+
 
 from rets.errors import RetsParseError
 
@@ -75,7 +76,11 @@ def _decode_datetime(value: str, include_tz: bool) -> datetime:
     elif re.match(r'^\d{4}-\d{2}-\d{2}$', value):
         value = '%sT00:00:00' % value[0:10]
 
-    decoded = udatetime.from_string(value)
+    default_date = datetime(1970, 1, 1, 0, 0, 0, tzinfo=timezone(timedelta(0)))
+
+    decoded = parse(value,default=default_date)
+    if decoded.tzinfo is None:
+        decoded = decoded.astimezone(timezone.utc)
     if not include_tz:
         return decoded.astimezone(timezone.utc).replace(tzinfo=None)
     return decoded
